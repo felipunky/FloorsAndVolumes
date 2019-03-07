@@ -1,0 +1,6 @@
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\bin\FloorsAndVolumes.dll
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\bin\FloorsAndVolumes.pdb
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\bin\SurfaceComponents.dll
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\obj\Debug\FloorsAndVolumes.csprojResolveAssemblyReference.cache
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\obj\Debug\FloorsAndVolumes.dll
+c:\users\paula\documents\visual studio 2017\Projects\FloorsAndVolumes\FloorsAndVolumes\obj\Debug\FloorsAndVolumes.pdb

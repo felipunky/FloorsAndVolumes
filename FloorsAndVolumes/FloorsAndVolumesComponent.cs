@@ -129,7 +129,7 @@ namespace FloorsAndVolumes
                 }
 
             }
-            
+
             int branches = curves.BranchCount;
             List<Polyline> listOut = new List<Polyline>();
 
@@ -152,7 +152,7 @@ namespace FloorsAndVolumes
 
                     var comparer = new List<double>();
 
-                    var listOfCurves = new List<Polyline>();
+                    var listOfCurves = new DataTree<Polyline>();
                     var listOfCurvesOne = new List<Polyline>();
                     var listOfCurvesTwo = new List<Polyline>();
 
@@ -163,6 +163,9 @@ namespace FloorsAndVolumes
 
                     listOfPlanes.AddRange(frames.Branch(0));
 
+                    var pathOne = new GH_Path(1);
+                    var pathTwo = new GH_Path(2);
+
                     for (int i = 0; i < curves.Branch(1).Count; ++i)
                     {
 
@@ -171,7 +174,7 @@ namespace FloorsAndVolumes
                         if (pointComparer >= comparer[i])
                         {
 
-                            listOfCurves.Add(curves.Branch(1)[i]);
+                            listOfCurves.Add(curves.Branch(1)[i], pathOne);
 
                         }
 
@@ -219,8 +222,8 @@ namespace FloorsAndVolumes
 
                     var comparer = new List<double>();
 
-                    var listOfCurves = new List<Polyline>();
-                    var listOfCurvesOne = new List<Polyline>();
+                    var listOfCurves = new DataTree<Polyline>();
+                    var listOfCurvesOne = new DataTree<Polyline>();
                     var listOfCurvesTwo = new List<Polyline>();
 
                     listOfCurves.AddRange(curves.Branch(0));
@@ -230,6 +233,9 @@ namespace FloorsAndVolumes
 
                     listOfPlanes.AddRange(frames.Branch(0));
 
+                    var pathOne = new GH_Path(1);
+                    var pathTwo = new GH_Path(2);
+
                     for (int i = 0; i < curves.Branch(1).Count; ++i)
                     {
 
@@ -238,15 +244,15 @@ namespace FloorsAndVolumes
                         if (pointComparer >= comparer[i])
                         {
 
-                            listOfCurves.Add(curves.Branch(1)[i]);
+                            listOfCurves.Add(curves.Branch(1)[i], pathOne);
 
                         }
 
                         else
                         {
 
-                            listOfCurvesOne.Add(curves.Branch(1)[i]);
-                            listOfCurvesOne.Add(curves.Branch(2)[i]);
+                            listOfCurvesOne.Add(curves.Branch(1)[i], pathOne);
+                            listOfCurvesOne.Add(curves.Branch(2)[i], pathTwo);
                             listOfPlanesOne.Add(frames.Branch(1)[i]);
 
                         }
@@ -263,7 +269,7 @@ namespace FloorsAndVolumes
                         if (pointComparer >= comparerOne[i])
                         {
 
-                            listOfCurves.Add(curves.Branch(2)[i]);
+                            listOfCurves.Add(curves.Branch(2)[i], pathTwo);
 
                         }
 
@@ -336,38 +342,35 @@ namespace FloorsAndVolumes
 
         }
 
-        List<Polyline> RegionUnion(List<Polyline> listOfCurves, List<Plane> frames)
+        List<Polyline> RegionUnion(DataTree<Polyline> listOfCurves, List<Plane> frames)
         {
+
+            int curveCount = listOfCurves.BranchCount;
 
             var regionUnion = new SurfaceComponents.SolidComponents.Component_CurveBooleanUnion();
             var regionUnionInputCurves = regionUnion.Params.Input[0] as Grasshopper.Kernel.GH_PersistentParam<Grasshopper.Kernel.Types.GH_Curve>;
             regionUnionInputCurves.PersistentData.ClearData();
 
-            int curveCount = listOfCurves.Count;
-            int branchOneCount = frames.Count;
-
-            var ghCurve = new GH_Curve[curveCount];
-
             var regionUnionInputPlanes = regionUnion.Params.Input[1] as Grasshopper.Kernel.GH_PersistentParam<Grasshopper.Kernel.Types.GH_Plane>;
             regionUnionInputPlanes.PersistentData.ClearData();
 
+            var ghPlane = new GH_Plane();
+
             for (int i = 0; i < curveCount; ++i)
-            {
+                for (int j = 0; j < listOfCurves.Branch(i).Count; ++j)
+                {
 
-                regionUnionInputCurves.PersistentData.Append(new GH_Curve(listOfCurves[i].ToNurbsCurve()));
+                    regionUnionInputCurves.PersistentData.Append(new GH_Curve(listOfCurves.Branch(i)[j].ToNurbsCurve()));
 
-            }
+                    if (i == 0)
+                    {
 
-            var ghPlane = new GH_Plane[branchOneCount];
+                        GH_Convert.ToGHPlane(frames[j], GH_Conversion.Both, ref ghPlane);
+                        regionUnionInputPlanes.PersistentData.Append(new GH_Plane(ghPlane));
 
-            for (int i = 0; i < branchOneCount; ++i)
-            {
+                    }
 
-                GH_Convert.ToGHPlane(frames[i], GH_Conversion.Both, ref ghPlane[i]);
-                regionUnionInputPlanes.PersistentData.Append(new GH_Plane(ghPlane[i]));
-
-            }
-
+                }
 
             regionUnion.ExpireSolution(true);
 
@@ -376,28 +379,36 @@ namespace FloorsAndVolumes
 
             regionUnion.Params.Output[0].CollectData();
 
-            int countOfUnions = regionUnion.Params.Output[0].VolatileDataCount;
+            int countOfUnions = regionUnion.Params.Output[0].VolatileData.PathCount;
 
             var listOfUnionObjs = new object();
+
             Curve temp = null;
-            var polyOut = new Polyline[countOfUnions];
+            var polyOut = new Polyline[countOfUnions][];
+            var polyList = new List<Polyline>();
 
             for (int i = 0; i < countOfUnions; ++i)
             {
 
-                listOfUnionObjs = regionUnion.Params.Output[0].VolatileData.get_Branch(i)[0];
-                GH_Convert.ToCurve(listOfUnionObjs, ref temp, GH_Conversion.Both);
-                temp.TryGetPolyline(out polyOut[i]);
+                int item = regionUnion.Params.Output[0].VolatileData.get_Branch(i).Count;
+
+                polyOut[i] = new Polyline[item];
+
+                for (int j = 0; j < item; ++j)
+                {
+
+                    listOfUnionObjs = regionUnion.Params.Output[0].VolatileData.get_Branch(i)[j];
+                    GH_Convert.ToCurve(listOfUnionObjs, ref temp, GH_Conversion.Both);
+                    temp.TryGetPolyline(out polyOut[i][j]);
+                    polyList.Add(polyOut[i][j]);
+
+                }
 
             }
 
             doc.RemoveObject(regionUnion.Attributes, false);
 
-            var polysOut = new List<Polyline>();
-            polysOut.AddRange(polyOut);
-
-            return polysOut;
-
+            return polyList;
 
         }
 

@@ -26,7 +26,7 @@ namespace FloorsAndVolumes
             get
             {
                 //Return a short string describing the purpose of this GHA library.
-                return "Finds the region intersection of 1, 2 or 3 shapes.";
+                return "Finds the region intersection of 1, 2 or 3 shapes. It also modifies Galapagos GenePools through sliders.";
             }
         }
         public override Guid Id
